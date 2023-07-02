@@ -1,0 +1,24 @@
+# Dependências
+/node_modules
+
+# Arquivos gerados
+/dist
+/build
+
+# Logs
+/logs
+
+# Arquivos de configuração sensíveis
+.env
+.env.test
+
+# Arquivos de backup
+*.bak
+
+# Arquivos de teste
+/coverage
+
+# Arquivos temporários
+/tmp
+
+/db/app.db
