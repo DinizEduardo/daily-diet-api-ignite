@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { knex } from '../database'
+import { authenticateUser } from '../middlewares/authenticate-users'
 
 export async function usersRoutes(app: FastifyInstance) {
   app.post('/register', async (request, reply) => {
@@ -62,36 +63,13 @@ export async function usersRoutes(app: FastifyInstance) {
     reply.send({ message: 'Login bem-sucedido' })
   })
 
-  // Middleware
-  const authenticate = async (request, reply) => {
-    try {
-      // Obtenha o token JWT dos cookies da requisição
-      const token = request.cookies.token
-
-      // Verifique se o token está presente
-      if (!token) {
-        reply.status(401).send({ message: 'Token não fornecido' })
-        throw new Error('Token não fornecido')
-      }
-
-      // Verifique e decodifique o token JWT
-      const decodedToken = await app.jwt.verify(token)
-
-      // Defina o objeto do usuário autenticado na requisição
-      request.user = { userId: decodedToken.userId }
-    } catch (error) {
-      reply.status(401).send({ message: 'Token inválido' })
-      throw new Error('Token inválido')
-    }
-  }
-
   // Rota protegida que requer autenticação via token JWT
   app.get(
     '/protected',
-    { preHandler: authenticate },
+    { preHandler: authenticateUser },
     async (request, reply) => {
       // O usuário autenticado está disponível no objeto `request.user`
-      const userId = request.user.userId
+      const userId = request.logged.id
 
       // Recupere as informações do usuário no banco de dados
       const user = await knex('users').where('id', userId).first()
