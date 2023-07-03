@@ -18,6 +18,8 @@
   "dependencies": {
     "@rocketseat/eslint-config": "^1.2.0",
     "eslint": "^8.44.0",
-    "fastify": "^4.19.0"
+    "fastify": "^4.19.0",
+    "knex": "^2.4.2",
+    "sqlite3": "^5.1.6"
   }
 }
