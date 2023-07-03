@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt'
+import { randomUUID } from 'crypto'
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { knex } from '../database'
-import { authenticateUser } from '../middlewares/authenticate-users'
 
 export async function usersRoutes(app: FastifyInstance) {
   app.post('/register', async (request, reply) => {
@@ -26,6 +26,7 @@ export async function usersRoutes(app: FastifyInstance) {
 
     // Insira o usuário no banco de dados
     await knex('users').insert({
+      id: randomUUID(),
       name: body.name,
       email: body.email,
       password: hashedPassword,
@@ -48,7 +49,6 @@ export async function usersRoutes(app: FastifyInstance) {
       return
     }
 
-    // Gere o token JWT com uma expiração de 1 hora
     const token = app.jwt.sign({ userId: user.id })
 
     // Defina o token JWT nos cookies
@@ -62,20 +62,4 @@ export async function usersRoutes(app: FastifyInstance) {
 
     reply.send({ message: 'Login bem-sucedido' })
   })
-
-  // Rota protegida que requer autenticação via token JWT
-  app.get(
-    '/protected',
-    { preHandler: authenticateUser },
-    async (request, reply) => {
-      // O usuário autenticado está disponível no objeto `request.user`
-      const userId = request.logged.id
-
-      // Recupere as informações do usuário no banco de dados
-      const user = await knex('users').where('id', userId).first()
-
-      // Faça algo com as informações do usuário
-      reply.send({ message: `Olá, ${user.name}! Esta é uma rota protegida.` })
-    },
-  )
 }
