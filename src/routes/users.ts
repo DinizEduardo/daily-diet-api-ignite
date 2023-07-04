@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { knex } from '../database'
+import { authenticateUser } from '../middlewares/authenticate-users'
 
 export async function usersRoutes(app: FastifyInstance) {
   app.post('/register', async (request, reply) => {
@@ -62,4 +63,73 @@ export async function usersRoutes(app: FastifyInstance) {
 
     reply.send({ message: 'Login bem-sucedido' })
   })
+
+  app.get(
+    '/summary',
+    { preHandler: authenticateUser },
+    async (request, reply) => {
+      const meals = await knex('meals')
+        .where({
+          userId: request.logged.id,
+        })
+        .select()
+
+      const totalMeals = meals.length
+
+      // Filtrar refeições dentro e fora da dieta
+      const mealsInDiet = meals.filter((meal) => meal.diet)
+      const mealsOutOfDiet = meals.filter((meal) => !meal.diet)
+
+      // Quantidade total de refeições dentro da dieta
+      const totalMealsInDiet = mealsInDiet.length
+
+      // Quantidade total de refeições fora da dieta
+      const totalMealsOutOfDiet = mealsOutOfDiet.length
+
+      // Melhor sequência de refeições dentro da dieta
+      const sortedMeals = meals.sort((meal1, meal2) => {
+        return (
+          new Date(meal1.datetime).getTime() -
+          new Date(meal2.datetime).getTime()
+        )
+      })
+
+      let currentStreak = {
+        date: new Date(sortedMeals[0].datetime),
+        amount: 0,
+      }
+      let maxStreak = 0
+
+      for (let i = 0; i < sortedMeals.length; i++) {
+        const mealDate = new Date(sortedMeals[i].datetime)
+
+        if (isSameDay(mealDate, currentStreak.date) && sortedMeals[i].diet) {
+          currentStreak.amount += 1
+        } else {
+          maxStreak = Math.max(maxStreak, currentStreak.amount)
+          currentStreak = {
+            date: mealDate,
+            amount: sortedMeals[i].diet ? 1 : 0,
+          }
+        }
+      }
+
+      maxStreak = Math.max(maxStreak, currentStreak.amount)
+
+      return {
+        totalMeals,
+        totalMealsInDiet,
+        totalMealsOutOfDiet,
+        maxStreak,
+      }
+    },
+  )
+
+  function isSameDay(date1: Date, date2: Date) {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    )
+  }
 }
