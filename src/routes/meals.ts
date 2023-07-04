@@ -93,4 +93,43 @@ export async function mealsRoutes(app: FastifyInstance) {
         .send({ message: 'Refeição excluida com sucesso.' })
     },
   )
+
+  app.put('/:id', { preHandler: authenticateUser }, async (request, reply) => {
+    const getMealParamsSchema = z.object({
+      id: z.string().uuid(),
+    })
+
+    const { id } = getMealParamsSchema.parse(request.params)
+
+    const updateMealBodySchema = z.object({
+      name: z.string(),
+      description: z.string(),
+      date: z.string().datetime(),
+      diet: z.coerce.boolean(),
+    })
+
+    const body = updateMealBodySchema.parse(request.body)
+
+    const meal = await knex('meals')
+      .where({
+        userId: request.logged.id,
+        id,
+      })
+      .first()
+
+    if (!meal) {
+      return reply.status(404).send({ message: 'Refeição não encontrada' })
+    }
+
+    const mealUpdated = await knex('meals')
+      .update({
+        name: body.name,
+        description: body.description,
+        datetime: body.date,
+        diet: body.diet,
+      })
+      .returning('*')
+
+    return { meal: mealUpdated[0] }
+  })
 }
