@@ -28,4 +28,35 @@ export async function mealsRoutes(app: FastifyInstance) {
 
     return { meal }
   })
+
+  app.get('/', { preHandler: authenticateUser }, async (request) => {
+    const meals = await knex('meals')
+      .where({
+        userId: request.logged.id,
+      })
+      .select()
+
+    return { meals }
+  })
+
+  app.get('/:id', { preHandler: authenticateUser }, async (request, reply) => {
+    const getMealParamsSchema = z.object({
+      id: z.string().uuid(),
+    })
+
+    const { id } = getMealParamsSchema.parse(request.params)
+
+    const meal = await knex('meals')
+      .where({
+        userId: request.logged.id,
+        id,
+      })
+      .first()
+
+    if (!meal) {
+      return reply.status(404).send({ message: 'Refeição não encontrada' })
+    }
+
+    return { meal }
+  })
 }
